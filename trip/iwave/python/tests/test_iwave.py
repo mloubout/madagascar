@@ -27,7 +27,7 @@ def test_run_iwave_roundtrip(tmp_path):
         outputs = run_iwave(
             "dummy_binary",
             inputs={"csq": csq},
-            output_keys=["data"],
+            output_specs={"data": csq.shape},
         )
     assert "data" in outputs
     assert outputs["data"].shape == (2, 3)

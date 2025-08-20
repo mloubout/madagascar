@@ -33,6 +33,8 @@ def write_rsf(path: Path, array: np.ndarray) -> Path:
     header_lines: List[str] = [f"in={data_path}", "data_format=native_float"]
     for i, n in enumerate(array.shape, start=1):
         header_lines.append(f"n{i}={int(n)}")
+        header_lines.append(f"d{i}=1")
+        header_lines.append(f"o{i}=0")
     with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(header_lines) + "\n")
     return path
@@ -64,7 +66,7 @@ def read_rsf(path: Path) -> np.ndarray:
 def run_iwave(
     binary: str,
     inputs: Dict[str, np.ndarray],
-    output_keys: Iterable[str],
+    output_specs: Dict[str, tuple[int, ...]],
     extra_args: Optional[Iterable[str]] = None,
 ) -> Dict[str, np.ndarray]:
     """Run an IWAVE program using ``numpy`` arrays.
@@ -77,10 +79,12 @@ def run_iwave(
         Mapping of IWAVE ``iokey`` names to ``numpy`` arrays. Each array will be
         written to a temporary RSF file and passed to the executable as
         ``key=filename``.
-    output_keys:
-        Iterable of ``iokey`` names that the executable will produce. These are
-        also passed as ``key=filename`` arguments and read back after the
-        executable finishes.
+    output_specs:
+        Mapping of ``iokey`` names that the executable will produce to the
+        expected array shapes. Empty arrays of the specified shapes are written
+        as RSF prototypes and passed to the executable as ``key=filename``
+        arguments. The generated files are read back after the executable
+        finishes.
     extra_args:
         Additional command line arguments to append when invoking the binary.
 
@@ -103,8 +107,9 @@ def run_iwave(
 
         # Reserve file names for outputs
         out_files: Dict[str, Path] = {}
-        for key in output_keys:
+        for key, shape in output_specs.items():
             hdr = tmp_path / f"{key}.rsf"
+            write_rsf(hdr, np.zeros(shape, dtype=np.float32))
             out_files[key] = hdr
             cmd.append(f"{key}={hdr}")
 
